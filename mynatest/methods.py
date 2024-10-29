@@ -37,7 +37,7 @@ def sign_jpki_messages(
       for p2 in trange(0x00, 0xff):
         sig, status = card.jpki_sign(msg, p1=p1, p2=p2, raise_error=False)
         if status.status_type() == CardResponseStatusType.NORMAL_END:
-          tqdm.write(f"Signature found at {p1.to_bytes(1, 'big').hex()}{p2.to_bytes(1, 'big').hex()}: {sig.hex()}")
+          tqdm.write(f"Signature found at {p1.to_bytes(1, 'big').hex()}{p2.to_bytes(1, 'big').hex()}: {len(sig)} bytes")
 
 
 def sign_std_messages(
