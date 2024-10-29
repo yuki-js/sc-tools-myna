@@ -3,7 +3,7 @@ import datetime
 from textwrap import dedent
 
 from tqdm import tqdm
-from mynatest.constants import COMMON_DF_DATA, JPKI_DATA, KENHOJO_DATA, KENKAKU_DATA
+from mynatest.constants import COMMON_DF_DATA, JPKI_DATA, JUKI_DATA, KENHOJO_DATA, KENKAKU_DATA
 from mynatest.methods import get_whole_record, iter_record, safe_verify, test_efs
 from mynatest.testdata import MESSAGES
 from sc_tools.apdu import CommandApdu
@@ -68,8 +68,16 @@ card.transmit_callback = transmit_callback
 
 EFLIMIT=0x20
 
-print("Default DF Phase...")
-# list_do(card)
+print("-------------- Default DF Phase --------------")
+iin, _ = card.get_data(b"\x42")
+cin, _ = card.get_data(b"\x45")
+card_data, _ = card.get_data(b"\x66")
+print(f"IIN: {iin.hex()}")
+print(f"CIN: {cin.hex()}")
+print(f"Card Data: {card_data.hex()}")
+
+list_do(card)
+
 # list_cla_ins(card)
 
 # Common DF
@@ -81,7 +89,7 @@ test_efs(card, 0, EFLIMIT) # 時間かかるから制限
 
 # list_do(card)
 
-print("JPKI Phase...")
+print("-------------- JPKI Phase --------------")
 
 card.select_df(JPKI_DATA["DF"].df)
 card.select_ef(JPKI_DATA["Token"].ef)
@@ -110,7 +118,7 @@ if sw != 0x9000:
 
 test_efs(card, 0, EFLIMIT)
 
-print("Kenhojo Phase...")
+print("-------------- Kenhojo Phase --------------")
 
 card.select_df(KENHOJO_DATA["DF"].df)
 card.select_ef(KENHOJO_DATA["EFs"]["PINEF"].ef)
@@ -130,6 +138,10 @@ card.select_ef(KENKAKU_DATA["EFs"]["PIN-A-EF"].ef)
 safe_verify(card, myna.encode("ascii"), 10)
 test_efs(card, 0, EFLIMIT)
 # list_do(card)
+
+print("-------------- Juki Phase --------------")
+card.select_df(JUKI_DATA["DF"].df)
+test_efs(card, 0, EFLIMIT)
 
 print("Finished")
 transceive_log_file.close()
