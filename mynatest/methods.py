@@ -91,11 +91,11 @@ def test_efs(
       card.read_all_binary()
     if CardFileAttribute.WEF_RECORD in attr:
       get_whole_record(card)
-      # iter_record(card) # 時間かかるのでコメントアウト
+      iter_record(card) # 時間かかるのでコメントアウト
     if CardFileAttribute.IEF_INTERNAL_AUTHENTICATE_KEY in attr:
       intauth_messages(card)
     if CardFileAttribute.JPKI_SIGN_PRIVATE_KEY in attr:
-      # sign_jpki_messages(card) # 時間かかるのでコメントアウト
+      sign_jpki_messages(card) # 時間かかるのでコメントアウト
       pass
     
   print("Test Finished")

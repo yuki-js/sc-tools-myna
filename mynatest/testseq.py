@@ -78,7 +78,7 @@ print(f"Card Data: {card_data.hex()}")
 
 list_do(card)
 
-# list_cla_ins(card)
+list_cla_ins(card)
 
 # Common DF
 card.select_df(COMMON_DF_DATA["DF"].df)
@@ -87,7 +87,7 @@ card_id = get_whole_record(card)[2:]
 print(f"Card ID: {card_id.decode('ascii')}")
 test_efs(card, 0, EFLIMIT) # 時間かかるから制限
 
-# list_do(card)
+list_do(card)
 
 print("-------------- JPKI Phase --------------")
 
@@ -98,13 +98,11 @@ if status.status_type() != CardResponseStatusType.NORMAL_END:
     print("Failed to read Token")
     exit(1)
 
-# list_do(card)
+list_do(card)
 card.select_ef(JPKI_DATA["Sign"]["PINEF"].ef)
 safe_verify(card, b"ABC123", 5)
 card.select_ef(JPKI_DATA["Auth"]["PINEF"].ef)
 safe_verify(card, b"1234", 3)
-# list_ef(card, cla=0x00)
-# list_cla_ins(card)
 
 card.transmit(CommandApdu(0x00, 0x84, 0x00, 0x00, None, 0x100).to_bytes())
 _, sw = card.transmit(CommandApdu(0x00, 0x84, 0x00, 0x00, None, 0x101).to_bytes(), raise_error=False)
@@ -125,7 +123,7 @@ card.select_ef(KENHOJO_DATA["EFs"]["PINEF"].ef)
 safe_verify(card, b"1234", 3)
 test_efs(card, 0, EFLIMIT)
 
-# list_do(card)
+list_do(card)
 card.select_ef(KENHOJO_DATA["EFs"]["Mynumber"].ef)
 data, sw = card.read_binary()
 assert sw.sw == 0x9000
@@ -137,7 +135,7 @@ card.select_df(KENKAKU_DATA["DF"].df)
 card.select_ef(KENKAKU_DATA["EFs"]["PIN-A-EF"].ef)
 safe_verify(card, myna.encode("ascii"), 10)
 test_efs(card, 0, EFLIMIT)
-# list_do(card)
+list_do(card)
 
 print("-------------- Juki Phase --------------")
 card.select_df(JUKI_DATA["DF"].df)
