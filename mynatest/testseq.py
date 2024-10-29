@@ -4,7 +4,7 @@ from textwrap import dedent
 
 from tqdm import tqdm
 from mynatest.constants import COMMON_DF_DATA, JPKI_DATA, JUKI_DATA, KENHOJO_DATA, KENKAKU_DATA
-from mynatest.methods import get_whole_record, iter_record, safe_verify, test_efs
+from mynatest.methods import get_whole_record, iter_record, safe_verify, sign_std_messages, test_efs
 from mynatest.testdata import MESSAGES
 from sc_tools.apdu import CommandApdu
 from sc_tools.dump_binary import dump_binary
@@ -116,6 +116,10 @@ if sw != 0x9000:
 
 test_efs(card, 0, EFLIMIT)
 
+card.select_ef(JPKI_DATA["Auth"]["KeyEF"].ef)
+sign_std_messages(card)
+
+
 print("-------------- Kenhojo Phase --------------")
 
 card.select_df(KENHOJO_DATA["DF"].df)
@@ -139,6 +143,10 @@ list_do(card)
 
 print("-------------- Juki Phase --------------")
 card.select_df(JUKI_DATA["DF"].df)
+
+card.select_ef(JUKI_DATA["EFs"]["PIN-EF"].ef)
+safe_verify(card, b"1234", 3)
+
 test_efs(card, 0, EFLIMIT)
 
 print("Finished")

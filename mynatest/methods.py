@@ -23,28 +23,38 @@ def safe_verify(
 def sign_jpki_messages(
     card: CardConnection,
 ):
-  for msg in tqdm(MESSAGES, desc="Message"):
-    for p1 in trange(0x00, 0xff, desc="p1", leave=False):
-      # first test with p2=0x00 and p2=0x80
-      _, s00 = card.jpki_sign(msg, p1=p1, p2=0x00, raise_error=False)
-      _, s80 = card.jpki_sign(msg, p1=p1, p2=0x80, raise_error=False)
-      if s00.status_type() != CardResponseStatusType.NORMAL_END and s80.status_type() != CardResponseStatusType.NORMAL_END:
-        continue # assume that this p1 is not valid
+  p1p2 = []
+  # parameter search phase
+  for p1 in trange(0x00, 0x100, desc="p1"):
+    # first test with p2=0x00 and p2=0x80
+    msg = MESSAGES[0]
+    _, s00 = card.jpki_sign(msg, p1=p1, p2=0x00, raise_error=False)
+    _, s80 = card.jpki_sign(msg, p1=p1, p2=0x80, raise_error=False)
+    if s00.status_type() != CardResponseStatusType.NORMAL_END and s80.status_type() != CardResponseStatusType.NORMAL_END:
+      continue # assume that this p1 is not valid
 
-      for p2 in trange(0x00, 0xff, desc="p2", leave=False):
-        sig, status = card.jpki_sign(msg, p1=p1, p2=p2, raise_error=False)
-        if status.status_type() == CardResponseStatusType.NORMAL_END:
-          tqdm.write(f"Signature found at {p1.to_bytes(1, 'big').hex()}{p2.to_bytes(1, 'big').hex()}: {len(sig)} bytes")
+    for p2 in trange(0x00, 0x100, desc="p2", leave=False):
+      sig, status = card.jpki_sign(msg, p1=p1, p2=p2, raise_error=False)
+      if status.status_type() == CardResponseStatusType.NORMAL_END:
+        tqdm.write(f"Signature found at {p1.to_bytes(1, 'big').hex()}{p2.to_bytes(1, 'big').hex()}: {len(sig)} bytes")
+        p1p2.append((p1, p2))
+  
+  # sign phase
+  for m in tqdm(MESSAGES, desc="Messages"):
+    for p1, p2 in tqdm(p1p2, desc="P1P2", leave=False):
+      _, status = card.jpki_sign(m, p1=p1, p2=p2, raise_error=False)
+      if status.status_type() != CardResponseStatusType.NORMAL_END:
+        tqdm.write(f"Warning: Signature failed at {p1.to_bytes(1, 'big').hex()}{p2.to_bytes(1, 'big').hex()}")
+
 
 
 def sign_std_messages(
     card: CardConnection,
 ):
-  for msg in tqdm(MESSAGES, desc="Message"):
-    for p in trange(0x0000, 0xffff, desc="P1P2", leave=False):
-      sig, status = card.std_sign(msg, p1=(p >> 8) & 0xff, p2=p & 0xff, raise_error=False)
-      if status.status_type() == CardResponseStatusType.NORMAL_END:
-        tqdm.write(f"Signature found at {p.to_bytes(2, 'big').hex()}: {sig.hex()}")
+  for p in trange(0x0000, 0xffff, desc="P1P2", leave=False):
+    sig, status = card.std_sign(MESSAGES[2], p1=(p >> 8) & 0xff, p2=p & 0xff, raise_error=False)
+    if status.status_type() == CardResponseStatusType.NORMAL_END:
+      tqdm.write(f"Signature found at {p.to_bytes(2, 'big').hex()}: {sig.hex()}")
 
 def intauth_messages(
     card: CardConnection,
@@ -89,11 +99,11 @@ def test_efs(
       card.read_all_binary()
     if CardFileAttribute.WEF_RECORD in attr:
       get_whole_record(card)
-      iter_record(card) # 時間かかるのでコメントアウト
+      iter_record(card) 
     if CardFileAttribute.IEF_INTERNAL_AUTHENTICATE_KEY in attr:
       intauth_messages(card)
     if CardFileAttribute.JPKI_SIGN_PRIVATE_KEY in attr:
-      sign_jpki_messages(card) # 時間かかるのでコメントアウト
-      pass
+      sign_jpki_messages(card) 
+      #sign_std_messages(card)
     
   print("Test Finished")

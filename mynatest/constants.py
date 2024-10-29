@@ -68,5 +68,6 @@ COMMON_DF_DATA = {
 JUKI_DATA = {
   "DF": DF("D3921000310001010401"),
   "EFs": {
+    "PIN-EF": EF("001C", is_pin=True, pin_retry_count=3),
   }
 }
