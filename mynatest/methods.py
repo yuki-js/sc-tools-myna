@@ -79,22 +79,22 @@ def test_efs(
   print("Testing Found EFs...")
   for (efid, attr) in lief:
     card.select_ef(efid)
-    if attr & CardFileAttribute.UNKNOWN:
+    if attr == CardFileAttribute.UNKNOWN:
       continue
-    if attr & CardFileAttribute.IEF_VERIFY_KEY:
+    if CardFileAttribute.IEF_VERIFY_KEY in attr:
       pass # 無視
-    if attr & CardFileAttribute.VERIFICATION_REQUIRED:
+    if CardFileAttribute.VERIFICATION_REQUIRED in attr:
       continue
-    if attr & CardFileAttribute.LOCKED:
+    if CardFileAttribute.LOCKED in attr:
       continue
-    if attr & CardFileAttribute.WEF_TRANSPARENT:
+    if CardFileAttribute.WEF_TRANSPARENT in attr:
       card.read_all_binary()
-    if attr & CardFileAttribute.WEF_RECORD:
+    if CardFileAttribute.WEF_RECORD in attr:
       get_whole_record(card)
       # iter_record(card) # 時間かかるのでコメントアウト
-    if attr & CardFileAttribute.IEF_INTERNAL_AUTHENTICATE_KEY:
+    if CardFileAttribute.IEF_INTERNAL_AUTHENTICATE_KEY in attr:
       intauth_messages(card)
-    if attr & CardFileAttribute.JPKI_SIGN_PRIVATE_KEY:
+    if CardFileAttribute.JPKI_SIGN_PRIVATE_KEY in attr:
       # sign_jpki_messages(card) # 時間かかるのでコメントアウト
       pass
     
