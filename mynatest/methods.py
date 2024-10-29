@@ -24,15 +24,12 @@ def sign_jpki_messages(
     card: CardConnection,
 ):
   for msg in tqdm(MESSAGES, desc="Message"):
-    # for p in tqdm(range(0x0000, 0xffff)):
-    #   p1 = (p >> 8) & 0xff
-    #   p2 = p & 0xff
-    #   sig, status = card.jpki_sign(msg, p1=p1, p2=p2, raise_error=False)
     for p1 in trange(0x00, 0xff, desc="p1", leave=False):
-      # first test with p2=0x00
-      sig, status = card.jpki_sign(msg, p1=p1, p2=0x00, raise_error=False)
-      if status.status_type() != CardResponseStatusType.NORMAL_END:
-        continue # assume that p2=0x00 has no child signature
+      # first test with p2=0x00 and p2=0x80
+      _, s00 = card.jpki_sign(msg, p1=p1, p2=0x00, raise_error=False)
+      _, s80 = card.jpki_sign(msg, p1=p1, p2=0x80, raise_error=False)
+      if s00.status_type() != CardResponseStatusType.NORMAL_END and s80.status_type() != CardResponseStatusType.NORMAL_END:
+        continue # assume that this p1 is not valid
 
       for p2 in trange(0x00, 0xff, desc="p2", leave=False):
         sig, status = card.jpki_sign(msg, p1=p1, p2=p2, raise_error=False)
@@ -77,8 +74,9 @@ def test_efs(
 ):
   lief = list_ef(card, start=start, end=end)
   print("Testing Found EFs...")
-  for (efid, attr) in lief:
+  for (efid, attr) in tqdm(lief, desc="EFs"):
     card.select_ef(efid)
+    tqdm.write(f"EF: {efid.hex()} Attr: {attr.name}")
     if attr == CardFileAttribute.UNKNOWN:
       continue
     if CardFileAttribute.IEF_VERIFY_KEY in attr:
