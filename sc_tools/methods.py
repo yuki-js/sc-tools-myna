@@ -89,11 +89,16 @@ def list_cla_ins(
                 data, status = connection.transmit(
                     command.to_bytes(), raise_error=False
                 )
+            
             sw_hex = format(status.sw, "04X")
-            status_type = status.status_type()
-            tqdm.write(
-                f"CLA {cla_hex}, INS {ins_hex} found with status {sw_hex} ({status_type.name})."
-            )
+            if status_type == CardResponseStatusType.NORMAL_END:
+                tqdm.write(
+                    f"CLA {cla_hex}, INS {ins_hex} found with status {sw_hex} ({status_type.name}) and data {data.hex().upper()} ({len(data)} bytes)."
+                )
+            else: 
+                tqdm.write(
+                    f"CLA {cla_hex}, INS {ins_hex} found with status {sw_hex} ({status_type.name})."
+                )
             cla_ins_list.append((cla, ins, status))
 
     return cla_ins_list
@@ -265,9 +270,8 @@ def attribute_ef(
             ef_attribute |= CardFileAttribute.VERIFICATION_UNLIMITED
         if status.verification_remaining() == 0:
             ef_attribute |= CardFileAttribute.LOCKED
-        return ef_attribute
     if status_type == CardResponseStatusType.REFERENCED_IEF_LOCKED:
-        return CardFileAttribute.IEF_VERIFY_KEY | CardFileAttribute.LOCKED
+        ef_attribute |= CardFileAttribute.IEF_VERIFY_KEY | CardFileAttribute.LOCKED
 
     # IEF/INTERNAL_AUTHENTICATE_KEY
     data, status = connection.internal_authenticate(
@@ -311,25 +315,26 @@ def attribute_ef(
 
     # IEF/EXTERNAL_AUTHENTICATE_KEY or IEF/JPKI_SIGN_PRIVATE_KEY
     if ef_attribute != CardFileAttribute.UNKNOWN:
-        return ef_attribute
+        pass
+        # return ef_attribute
 
     # WEF/BINARY
     data, status = connection.read_binary(cla=cla, raise_error=False)
     status_type = status.status_type()
     if status_type == CardResponseStatusType.NORMAL_END:
-        return CardFileAttribute.WEF_TRANSPARENT
+        ef_attribute |= CardFileAttribute.WEF_TRANSPARENT
     if status_type == CardResponseStatusType.SECURITY_STATUS_NOT_FULFILLED:
-        return CardFileAttribute.VERIFICATION_REQUIRED
+        ef_attribute |= CardFileAttribute.VERIFICATION_REQUIRED
 
     # WEF/RECORD
     data, status = connection.read_record(cla=cla, raise_error=False)
     status_type = status.status_type()
     if status_type == CardResponseStatusType.NORMAL_END:
-        return CardFileAttribute.WEF_RECORD
+        ef_attribute |= CardFileAttribute.WEF_RECORD
     if status_type == CardResponseStatusType.SECURITY_STATUS_NOT_FULFILLED:
-        return CardFileAttribute.VERIFICATION_REQUIRED
+        ef_attribute |= CardFileAttribute.VERIFICATION_REQUIRED
 
-    return CardFileAttribute.UNKNOWN
+    return ef_attribute
 
 
 def list_ef(

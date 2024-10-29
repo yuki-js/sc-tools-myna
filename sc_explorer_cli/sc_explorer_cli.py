@@ -368,8 +368,7 @@ class ScExplorerCli:
             Self: This instance
         """
 
-        if key is not None and not isinstance(key, str):
-            raise ValueError("Argument `key` must be str.")
+
         if not isinstance(cla, int):
             raise ValueError("Argument `cla` must be int.")
 
