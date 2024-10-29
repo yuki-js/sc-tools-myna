@@ -72,7 +72,7 @@ def list_cla_ins(
             ins_hex = format(ins, "02X")
             # No Le
             command = CommandApdu(
-                cla, ins, 0x00, 0x00, extended=connection.allow_extended_apdu
+                cla, ins, 0x00, 0x00, extended=connection.allow_extended_apdu,
             )
             data, status = connection.transmit(command.to_bytes(), raise_error=False)
             if not status.is_cla_valid():

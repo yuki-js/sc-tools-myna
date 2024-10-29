@@ -234,7 +234,7 @@ class CardConnection:
         self,
         cla: int = 0x00,
         raise_error: bool = True,
-    ) -> tuple[bytes, CardResponseStatus]:
+    ) -> tuple[list[bytes], CardResponseStatus]:
         """READ (ALL) RECORD
 
         Args:
@@ -252,8 +252,8 @@ class CardConnection:
         if cla < 0x00 or 0xFF < cla:
             raise ValueError("Argument `cla` out of range. (0x00 <= cla <= 0xFF)")
 
-        data = b""
-        for record_number in range(0x01, 0x100):
+        data = []
+        for record_number in range(0x00, 0x100):
             chunk_data, status = self.read_record(
                 record_number, cla=cla, raise_error=False
             )
@@ -263,7 +263,7 @@ class CardConnection:
                 break
             if raise_error and status_type != CardResponseStatusType.NORMAL_END:
                 raise CardResponseError(status)
-            data += chunk_data
+            data = data + [chunk_data]
         self.last_response_data = data
         return data, status
 
@@ -575,6 +575,8 @@ class CardConnection:
     def jpki_sign(
         self,
         input: bytes,
+        p1: int = 0x00,
+        p2: int = 0x80,
         raise_error: bool = True,
     ) -> tuple[bytes, CardResponseStatus]:
         """JPKI Sign (PERFORM SECURITY OPERATION)
@@ -588,10 +590,30 @@ class CardConnection:
         """
 
         command = CommandApdu(
-            0x80, 0x2A, 0x00, 0x80, data=input, le="max", extended=False
+            0x80, 0x2A, p1, p2, data=input, le="max", extended=False
         )
         return self.transmit(command.to_bytes(), raise_error=raise_error)
+    def std_sign(
+        self,
+        input: bytes,
+        p1: int = 0x9e,
+        p2: int = 0x9a,
+        raise_error: bool = True,
+    ) -> tuple[bytes, CardResponseStatus]:
+        """PERFORM SECURITY OPERATION
 
+        Args:
+            input (bytes): Input
+            raise_error (bool, optional): Raise error when card error response returned. Defaults to True.
+
+        Returns:
+            tuple[bytes, CardResponseStatus]: Response Data and Status
+        """
+
+        command = CommandApdu(
+            0x00, 0x2A, p1, p2, data=input, le="max", extended=False
+        )
+        return self.transmit(command.to_bytes(), raise_error=raise_error)
 
 def create_card_connection(
     connection: PyscardCardConnection | Type4Tag,

@@ -1,7 +1,12 @@
 
 import datetime
 from textwrap import dedent
-from mynatest.constants import JPKI_DATA
+
+from tqdm import tqdm
+from mynatest.constants import COMMON_DF_DATA, JPKI_DATA, KENHOJO_DATA, KENKAKU_DATA
+from mynatest.methods import get_whole_record, iter_record, safe_verify, test_efs
+from mynatest.testdata import MESSAGES
+from sc_tools.apdu import CommandApdu
 from sc_tools.dump_binary import dump_binary
 from sc_tools.card_response import CardResponseStatus, CardResponseStatusType
 from sc_tools.card_connection import create_card_connection
@@ -61,18 +66,70 @@ def transmit_callback(
 
 card.transmit_callback = transmit_callback
 
-# JPKI
+EFLIMIT=0x20
+
+print("Default DF Phase...")
+# list_do(card)
+# list_cla_ins(card)
+
+# Common DF
+card.select_df(COMMON_DF_DATA["DF"].df)
+card.select_ef(b"\x00\x01")
+card_id = get_whole_record(card)[2:]
+print(f"Card ID: {card_id.decode('ascii')}")
+test_efs(card, 0, EFLIMIT) # 時間かかるから制限
+
+# list_do(card)
+
+print("JPKI Phase...")
 
 card.select_df(JPKI_DATA["DF"].df)
-card.select_ef(JPKI_DATA["Token"].df)
+card.select_ef(JPKI_DATA["Token"].ef)
 token, status=card.read_binary()
 if status.status_type() != CardResponseStatusType.NORMAL_END:
     print("Failed to read Token")
     exit(1)
 
-card.select_ef(JPKI_DATA["Sign"]["PINEF"].df)
-card.verify(b"ABC123")
-card.select_ef(JPKI_DATA["Auth"]["PINEF"].df)
-card.verify(b"1234")
-#list_ef(card, cla=0x00)
-list_cla_ins(card)
+# list_do(card)
+card.select_ef(JPKI_DATA["Sign"]["PINEF"].ef)
+safe_verify(card, b"ABC123", 5)
+card.select_ef(JPKI_DATA["Auth"]["PINEF"].ef)
+safe_verify(card, b"1234", 3)
+# list_ef(card, cla=0x00)
+# list_cla_ins(card)
+
+card.transmit(CommandApdu(0x00, 0x84, 0x00, 0x00, None, 0x100).to_bytes())
+_, sw = card.transmit(CommandApdu(0x00, 0x84, 0x00, 0x00, None, 0x101).to_bytes(), raise_error=False)
+assert sw != 0x9000
+
+card.select_ef(JPKI_DATA["Pinless"]["UnknownEF"].ef)
+card.transmit(CommandApdu(0x80, 0xa2, 0x06, 0xc1, JPKI_DATA["Pinless"]["IntermediateCert"], 0x00, True).to_bytes())
+_, sw = card.transmit(CommandApdu(0x80, 0xa2, 0x00, 0xc1, JPKI_DATA["Pinless"]["IntermediateCertSig"], 0x00, True).to_bytes(), raise_error=False)
+if sw != 0x9000:
+    print("This card does not support such IntermediateCertSig")
+
+test_efs(card, 0, EFLIMIT)
+
+print("Kenhojo Phase...")
+
+card.select_df(KENHOJO_DATA["DF"].df)
+card.select_ef(KENHOJO_DATA["EFs"]["PINEF"].ef)
+safe_verify(card, b"1234", 3)
+test_efs(card, 0, EFLIMIT)
+
+# list_do(card)
+card.select_ef(KENHOJO_DATA["EFs"]["Mynumber"].ef)
+data, sw = card.read_binary()
+assert sw.sw == 0x9000
+myna=data[3:15].decode("ascii")
+print(f"My Number: {myna}")
+
+print("Kenkaku Phase")
+card.select_df(KENKAKU_DATA["DF"].df)
+card.select_ef(KENKAKU_DATA["EFs"]["PIN-A-EF"].ef)
+safe_verify(card, myna.encode("ascii"), 10)
+test_efs(card, 0, EFLIMIT)
+# list_do(card)
+
+print("Finished")
+transceive_log_file.close()

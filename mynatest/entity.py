@@ -16,7 +16,7 @@ class EF:
     # check length
     if len(ef) != 2:
       raise ValueError("Invalid EF string")
-    self.df = ef
+    self.ef = ef
     
 class DF:
   def __init__(self, dfstr: str):
