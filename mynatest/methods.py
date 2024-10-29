@@ -23,18 +23,18 @@ def safe_verify(
 def sign_jpki_messages(
     card: CardConnection,
 ):
-  for msg in MESSAGES:
+  for msg in tqdm(MESSAGES, desc="Message"):
     # for p in tqdm(range(0x0000, 0xffff)):
     #   p1 = (p >> 8) & 0xff
     #   p2 = p & 0xff
     #   sig, status = card.jpki_sign(msg, p1=p1, p2=p2, raise_error=False)
-    for p1 in trange(0x00, 0xff):
+    for p1 in trange(0x00, 0xff, desc="p1", leave=False):
       # first test with p2=0x00
       sig, status = card.jpki_sign(msg, p1=p1, p2=0x00, raise_error=False)
       if status.status_type() != CardResponseStatusType.NORMAL_END:
         continue # assume that p2=0x00 has no child signature
 
-      for p2 in trange(0x00, 0xff):
+      for p2 in trange(0x00, 0xff, desc="p2", leave=False):
         sig, status = card.jpki_sign(msg, p1=p1, p2=p2, raise_error=False)
         if status.status_type() == CardResponseStatusType.NORMAL_END:
           tqdm.write(f"Signature found at {p1.to_bytes(1, 'big').hex()}{p2.to_bytes(1, 'big').hex()}: {len(sig)} bytes")
@@ -43,8 +43,8 @@ def sign_jpki_messages(
 def sign_std_messages(
     card: CardConnection,
 ):
-  for msg in MESSAGES:
-    for p in tqdm(range(0x0000, 0xffff)):
+  for msg in tqdm(MESSAGES, desc="Message"):
+    for p in trange(0x0000, 0xffff, desc="P1P2", leave=False):
       sig, status = card.std_sign(msg, p1=(p >> 8) & 0xff, p2=p & 0xff, raise_error=False)
       if status.status_type() == CardResponseStatusType.NORMAL_END:
         tqdm.write(f"Signature found at {p.to_bytes(2, 'big').hex()}: {sig.hex()}")
