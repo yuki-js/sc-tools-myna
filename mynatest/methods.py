@@ -1,5 +1,5 @@
 from tqdm import tqdm, trange
-from mynatest.testdata import MESSAGES
+from mynatest.testdata import MESSAGES, MSG2BYLEN
 from sc_tools.apdu import CommandApdu
 from sc_tools.card_connection import CardConnection
 from sc_tools.card_response import CardResponseStatusType
@@ -26,12 +26,13 @@ def safe_verify(
 
 def sign_jpki_messages(
     card: CardConnection,
+    msg_lists: list = MESSAGES,
 ):
   p1p2 = []
   # parameter search phase
   for p1 in trange(0x00, 0x100, desc="p1"):
     # first test with p2=0x00 and p2=0x80
-    msg = MESSAGES[0]
+    msg = msg_lists[0]
     _, s00 = card.jpki_sign(msg, p1=p1, p2=0x00, raise_error=False)
     _, s80 = card.jpki_sign(msg, p1=p1, p2=0x80, raise_error=False)
     if s00.status_type() != CardResponseStatusType.NORMAL_END and s80.status_type() != CardResponseStatusType.NORMAL_END:
@@ -44,7 +45,7 @@ def sign_jpki_messages(
         p1p2.append((p1, p2))
   
   # sign phase
-  for m in tqdm(MESSAGES, desc="Messages"):
+  for m in tqdm(msg_lists, desc="Messages"):
     for p1, p2 in tqdm(p1p2, desc="P1P2", leave=False):
       _, status = card.jpki_sign(m, p1=p1, p2=p2, raise_error=False)
       if status.status_type() != CardResponseStatusType.NORMAL_END:
@@ -54,16 +55,18 @@ def sign_jpki_messages(
 
 def sign_std_messages(
     card: CardConnection,
+    msg_lists: list = MESSAGES,
 ):
   for p in trange(0x0000, 0xffff, desc="P1P2", leave=False):
-    sig, status = card.std_sign(MESSAGES[2], p1=(p >> 8) & 0xff, p2=p & 0xff, raise_error=False)
+    sig, status = card.std_sign(msg_lists[0], p1=(p >> 8) & 0xff, p2=p & 0xff, raise_error=False)
     if status.status_type() == CardResponseStatusType.NORMAL_END:
       tqdm.write(f"Signature found at {p.to_bytes(2, 'big').hex()}: {sig.hex()}")
 
 def sign_std_9e9a_messages(
     card: CardConnection,
+    msg_lists: list = MESSAGES,
 ):
-  for m in tqdm(MESSAGES, desc="Messages"):
+  for m in tqdm(msg_lists, desc="Messages"):
     sig, status = card.std_sign(m, raise_error=False)
     if status.status_type() == CardResponseStatusType.NORMAL_END:
       tqdm.write(f"Signature found at 9E9A: {sig.hex()}")   
@@ -116,7 +119,7 @@ def test_efs(
     if CardFileAttribute.IEF_INTERNAL_AUTHENTICATE_KEY in attr:
       intauth_messages(card)
     if CardFileAttribute.JPKI_SIGN_PRIVATE_KEY in attr:
-      sign_jpki_messages(card) 
-      sign_std_9e9a_messages(card)
+      sign_jpki_messages(card, msg_lists=MSG2BYLEN)
+      sign_std_9e9a_messages(card, msg_lists=MSG2BYLEN)
     
   print("Test Finished")

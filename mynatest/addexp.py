@@ -66,7 +66,7 @@ def transmit_callback(
 
 card.transmit_callback = transmit_callback
 
-EFLIMIT=0xFF
+
 
 print("-------------- Default DF Phase --------------")
 iin, _ = card.get_data(b"\x42")
@@ -76,10 +76,10 @@ print(f"IIN: {iin.hex()}")
 print(f"CIN: {cin.hex()}")
 print(f"Card Data: {card_data.hex()}")
 
-list_do(card)
+#list_do(card)
 
-# list_cla_ins(card)
-test_efs(card, 0, EFLIMIT, ignore_error=True)
+#list_cla_ins(card)
+#test_efs(card, 0, 0x10000, ignore_error=True)
 
 # Common DF
 print("-------------- Common DF Phase --------------")
@@ -88,9 +88,9 @@ card.select_df(COMMON_DF_DATA["DF"].df)
 card.select_ef(b"\x00\x01")
 card_id = get_whole_record(card)[2:]
 print(f"Card ID: {card_id.decode('ascii')}")
-test_efs(card, 0, EFLIMIT) # 時間かかるから制限
+#test_efs(card, 0, 0x10000, ignore_error=True)
 
-list_do(card)
+#list_do(card)
 
 print("-------------- JPKI Phase --------------")
 
@@ -101,26 +101,16 @@ if status.status_type() != CardResponseStatusType.NORMAL_END:
     print("Failed to read Token")
     exit(1)
 
-list_do(card)
 card.select_ef(JPKI_DATA["Sign"]["PINEF"].ef)
 safe_verify(card, b"ABC123", 5)
 card.select_ef(JPKI_DATA["Auth"]["PINEF"].ef)
 safe_verify(card, b"1234", 3)
 
-card.transmit(CommandApdu(0x00, 0x84, 0x00, 0x00, None, 0x100).to_bytes())
-_, sw = card.transmit(CommandApdu(0x00, 0x84, 0x00, 0x00, None, 0x101).to_bytes(), raise_error=False)
-assert sw != 0x9000
+test_efs(card, 0x00, 0xff, ignore_error=True)
 
-card.select_ef(JPKI_DATA["Pinless"]["UnknownEF"].ef)
-card.transmit(CommandApdu(0x80, 0xa2, 0x06, 0xc1, JPKI_DATA["Pinless"]["IntermediateCert"], 0x00, True).to_bytes())
-_, sw = card.transmit(CommandApdu(0x80, 0xa2, 0x00, 0xc1, JPKI_DATA["Pinless"]["IntermediateCertSig"], 0x00, True).to_bytes(), raise_error=False)
-if sw != 0x9000:
-    print("This card does not support such IntermediateCertSig")
-
-test_efs(card, 0, EFLIMIT)
+test_efs(card, 0x2f00, 0x2fff, ignore_error=True)
 
 card.select_ef(JPKI_DATA["Auth"]["KeyEF"].ef)
-sign_std_messages(card)
 
 
 print("-------------- Kenhojo Phase --------------")
@@ -128,9 +118,8 @@ print("-------------- Kenhojo Phase --------------")
 card.select_df(KENHOJO_DATA["DF"].df)
 card.select_ef(KENHOJO_DATA["EFs"]["PINEF"].ef)
 safe_verify(card, b"1234", 3)
-test_efs(card, 0, EFLIMIT)
+test_efs(card, 0x2f00, 0x2fff, ignore_error=True)
 
-list_do(card)
 card.select_ef(KENHOJO_DATA["EFs"]["Mynumber"].ef)
 data, sw = card.read_binary()
 assert sw.sw == 0x9000
@@ -141,8 +130,7 @@ print("Kenkaku Phase")
 card.select_df(KENKAKU_DATA["DF"].df)
 card.select_ef(KENKAKU_DATA["EFs"]["PIN-A-EF"].ef)
 safe_verify(card, myna.encode("ascii"), 10)
-test_efs(card, 0, EFLIMIT)
-list_do(card)
+test_efs(card, 0x2f00, 0x2fff, ignore_error=True)
 
 print("-------------- Juki Phase --------------")
 card.select_df(JUKI_DATA["DF"].df)
@@ -150,7 +138,8 @@ card.select_df(JUKI_DATA["DF"].df)
 card.select_ef(JUKI_DATA["EFs"]["PIN-EF"].ef)
 safe_verify(card, b"1234", 3)
 
-test_efs(card, 0, EFLIMIT)
+test_efs(card, 0x00, 0xff, ignore_error=True)
+test_efs(card, 0x2f00, 0x2fff, ignore_error=True)
 
 print("Finished")
 transceive_log_file.close()

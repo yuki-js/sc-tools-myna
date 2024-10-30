@@ -11,6 +11,22 @@ MESSAGES = [
   SHA1_HEADER + bytes.fromhex("ca978112ca1bbdcafac231b39a23dc4da786eff8147c4e72b9807785afee48bb"),
 ]
 
+def make_bytes(length: int) -> bytes:
+  return bytes([i % 256 for i in range(length)])
+
+MSG2BYLEN = [
+  make_bytes(32),
+  SHA256_HEADER + make_bytes(32),
+  make_bytes(64),
+  make_bytes(65),
+  make_bytes(128),
+  make_bytes(129),
+  make_bytes(256),
+  make_bytes(257),
+  make_bytes(0xffff),
+]
+
 SEC_CODE = {
 "4000000204421200822020240502": 8150,
 }
+

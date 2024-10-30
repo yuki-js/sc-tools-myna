@@ -399,8 +399,8 @@ def list_ef(
             continue
         if not ignore_error:
             raise CardResponseError(status)
-        else: 
-            tqdm.write(f"Warning: EF {ef_id_bytes.hex().upper()} returned {status_type.name}.")
+        # else: 
+            # tqdm.write(f"Warning: EF {ef_id_bytes.hex().upper()} returned {status_type.name}.") # Commented out to reduce verbosity
     return ef_list
 
 
