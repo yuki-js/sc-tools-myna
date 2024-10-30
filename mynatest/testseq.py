@@ -66,7 +66,7 @@ def transmit_callback(
 
 card.transmit_callback = transmit_callback
 
-EFLIMIT=0x20
+EFLIMIT=0xFF
 
 print("-------------- Default DF Phase --------------")
 iin, _ = card.get_data(b"\x42")
