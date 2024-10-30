@@ -343,6 +343,7 @@ def list_ef(
     start: int = 0x0000,
     end: int = 0x10000,
     found_callback: Callable[[bytes, CardFileAttribute], None] | None = None,
+    ignore_error: bool = False,
 ) -> list[tuple[bytes, CardFileAttribute]]:
     """List EF
 
@@ -396,7 +397,10 @@ def list_ef(
             continue
         if status_type == CardResponseStatusType.NO_FILE_TO_BE_ACCESSED:
             continue
-        raise CardResponseError(status)
+        if not ignore_error:
+            raise CardResponseError(status)
+        else: 
+            tqdm.write(f"Warning: EF {ef_id_bytes.hex().upper()} returned {status_type.name}.")
     return ef_list
 
 

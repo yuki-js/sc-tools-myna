@@ -60,6 +60,14 @@ def sign_std_messages(
     if status.status_type() == CardResponseStatusType.NORMAL_END:
       tqdm.write(f"Signature found at {p.to_bytes(2, 'big').hex()}: {sig.hex()}")
 
+def sign_std_9e9a_messages(
+    card: CardConnection,
+):
+  for m in tqdm(MESSAGES, desc="Messages"):
+    sig, status = card.std_sign(m, raise_error=False)
+    if status.status_type() == CardResponseStatusType.NORMAL_END:
+      tqdm.write(f"Signature found at 9E9A: {sig.hex()}")   
+
 def intauth_messages(
     card: CardConnection,
 ):
@@ -84,9 +92,10 @@ def get_whole_record(
 def test_efs(
     card: CardConnection,
     start: int = 0,
-    end: int = 0xffff
+    end: int = 0xffff,
+    ignore_error: bool = False,
 ):
-  lief = list_ef(card, start=start, end=end)
+  lief = list_ef(card, start=start, end=end, ignore_error=ignore_error)
   print("Testing Found EFs...")
   for (efid, attr) in tqdm(lief, desc="EFs"):
     card.select_ef(efid)
@@ -108,6 +117,6 @@ def test_efs(
       intauth_messages(card)
     if CardFileAttribute.JPKI_SIGN_PRIVATE_KEY in attr:
       sign_jpki_messages(card) 
-      #sign_std_messages(card)
+      sign_std_9e9a_messages(card)
     
   print("Test Finished")

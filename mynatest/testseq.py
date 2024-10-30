@@ -79,8 +79,11 @@ print(f"Card Data: {card_data.hex()}")
 list_do(card)
 
 list_cla_ins(card)
+test_efs(card, 0, EFLIMIT, ignore_error=True)
 
 # Common DF
+print("-------------- Common DF Phase --------------")
+
 card.select_df(COMMON_DF_DATA["DF"].df)
 card.select_ef(b"\x00\x01")
 card_id = get_whole_record(card)[2:]
