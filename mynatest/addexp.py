@@ -3,6 +3,7 @@ import datetime
 from textwrap import dedent
 import time
 
+import smartcard
 from tqdm import tqdm, trange
 from mynatest.constants import COMMON_DF_DATA, JPKI_DATA, JUKI_DATA, KENHOJO_DATA, KENKAKU_DATA
 from mynatest.methods import get_whole_record, iter_record, make_bytes, safe_verify, sign_std_messages, test_efs
