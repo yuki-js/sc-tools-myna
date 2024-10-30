@@ -5,15 +5,19 @@ from sc_tools.card_connection import CardConnection
 from sc_tools.card_response import CardResponseStatusType
 from sc_tools.methods import CardFileAttribute, list_ef
 
+def get_pin_remaining(
+    card: CardConnection,
+):
+  lookup = CommandApdu(0x00, 0x20, 0x00, 0x80)
+  _, sw = card.transmit(lookup.to_bytes(), raise_error=False)
+  return sw.verification_remaining()
 
 def safe_verify(
     card: CardConnection,
     pin: bytes,
     assert_retry_count: int,
 ):
-  lookup = CommandApdu(0x00, 0x20, 0x00, 0x80)
-  _, sw = card.transmit(lookup.to_bytes(), raise_error=False)
-  remaining = sw.sw & 0x000F
+  remaining = get_pin_remaining(card)
   if remaining == 0:
     raise ValueError("PIN is blocked")
   if remaining < assert_retry_count:
@@ -90,7 +94,7 @@ def test_efs(
     if attr == CardFileAttribute.UNKNOWN:
       continue
     if CardFileAttribute.IEF_VERIFY_KEY in attr:
-      pass # 無視
+      get_pin_remaining(card)
     if CardFileAttribute.VERIFICATION_REQUIRED in attr:
       continue
     if CardFileAttribute.LOCKED in attr:
