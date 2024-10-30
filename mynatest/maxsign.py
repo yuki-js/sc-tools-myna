@@ -118,7 +118,7 @@ p1p2_sign = find_p1p2(prepare_sign_fn)
 def seek_jpki_sign_ub(
     prepfn,
     start: int = 0xf0,
-    end: int = 0xfff,
+    end: int = 0x1fff,
     p1: int = 0x00,
     p2: int = 0x00,
 ):

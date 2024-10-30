@@ -36,7 +36,14 @@ card = create_card_connection(
     auto_get_response=True,
     allow_extended_apdu=True,
 )
-transceive_log_file = open("transceive.log", "a")
+
+# get command arguments from command line
+import sys
+filename = "transceive.log"
+if len(sys.argv) > 1:
+    filename = sys.argv[1]
+
+transceive_log_file = open(filename, "a")
 def transmit_callback(
     command: bytes,
     response_data: bytes,
@@ -71,8 +78,11 @@ card.transmit_callback = transmit_callback
 #write atr to file
 transceive_log_file.write(f"ATR: {atr}\n\n")
 
+def repower_card():
+    reader.reconnect(disposition=smartcard.scard.SCARD_UNPOWER_CARD)
 
 print("-------------- Default DF Phase --------------")
+repower_card()
 iin, _ = card.get_data(b"\x42")
 cin, _ = card.get_data(b"\x45")
 card_data, _ = card.get_data(b"\x66")
@@ -80,24 +90,33 @@ print(f"IIN: {iin.hex()}")
 print(f"CIN: {cin.hex()}")
 print(f"Card Data: {card_data.hex()}")
 
+repower_card()
 list_do(card)
 
+repower_card()
 list_cla_ins(card)
-test_efs(card, 0, 0x10000, ignore_error=True)
+
+repower_card()
+test_efs(card, 0, 0x30, ignore_error=True)
+test_efs(card, 0x2f00, 0x2fff, ignore_error=True)
 
 # Common DF
 print("-------------- Common DF Phase --------------")
+
+repower_card()
 
 card.select_df(COMMON_DF_DATA["DF"].df)
 card.select_ef(b"\x00\x01")
 card_id = get_whole_record(card)[2:]
 print(f"Card ID: {card_id.decode('ascii')}")
-test_efs(card, 0, 0x10000, ignore_error=True)
+test_efs(card, 0, 0x30, ignore_error=True)
+test_efs(card, 0x2f00, 0x2fff, ignore_error=True)
 
 list_do(card)
 
 print("-------------- JPKI Phase --------------")
 
+repower_card()
 card.select_df(JPKI_DATA["DF"].df)
 card.select_ef(JPKI_DATA["Token"].ef)
 token, status=card.read_binary()
@@ -116,6 +135,7 @@ card.select_ef(JPKI_DATA["Auth"]["KeyEF"].ef)
 
 
 print("-------------- Kenhojo Phase --------------")
+repower_card()
 
 card.select_df(KENHOJO_DATA["DF"].df)
 card.select_ef(KENHOJO_DATA["EFs"]["PINEF"].ef)
@@ -135,6 +155,7 @@ safe_verify(card, myna.encode("ascii"), 10)
 test_efs(card, 0x2f00, 0x2fff, ignore_error=True)
 
 print("-------------- Juki Phase --------------")
+repower_card()
 card.select_df(JUKI_DATA["DF"].df)
 
 card.select_ef(JUKI_DATA["EFs"]["PIN-EF"].ef)
@@ -146,7 +167,7 @@ print("-------------- Extra JPKI Phase --------------")
 
 def prepare_sign_fn():
     try:
-        reader.reconnect(disposition=smartcard.scard.SCARD_UNPOWER_CARD)
+        repower_card()
         card.select_df(JPKI_DATA["DF"].df)
         card.select_ef(JPKI_DATA["Sign"]["PINEF"].ef)
         safe_verify(card, b"ABC123", 5)
@@ -159,7 +180,7 @@ def prepare_sign_fn():
 
 def prepare_auth_fn():
     try:
-        reader.reconnect(disposition=smartcard.scard.SCARD_UNPOWER_CARD)
+        repower_card()
         card.select_df(JPKI_DATA["DF"].df)
         card.select_ef(JPKI_DATA["Auth"]["PINEF"].ef)
         safe_verify(card, b"1234", 3)
@@ -190,7 +211,7 @@ p1p2_sign = find_p1p2(prepare_sign_fn)
 def seek_jpki_sign_ub(
     prepfn,
     start: int = 0xf0,
-    end: int = 0xfff,
+    end: int = 0x1fff,
     p1: int = 0x00,
     p2: int = 0x00,
 ):
@@ -198,6 +219,7 @@ def seek_jpki_sign_ub(
   Seek for the upper bound byte length that JPKI Sign can handle
   Find the maximum length with the binary search algorithm
   """
+  
 
   while start < end:
     mid = (start + end) // 2
@@ -213,7 +235,10 @@ def seek_jpki_sign_ub(
 
 def seek_by_p1p2(prepfn, p1p2):
     for p1, p2 in tqdm(p1p2, desc="P1P2(Test)", leave=False):
-        seek_jpki_sign_ub(prepfn, p1=p1, p2=p2)
+        try:
+            seek_jpki_sign_ub(prepfn, p1=p1, p2=p2)
+        except Exception as e:
+            tqdm.write(f"Failed to seek at {p1.to_bytes(1, 'big').hex()}{p2.to_bytes(1, 'big').hex()}: {e}")
 
 seek_by_p1p2(prepare_sign_fn, p1p2_sign)
 seek_by_p1p2(prepare_auth_fn, p1p2_auth)
