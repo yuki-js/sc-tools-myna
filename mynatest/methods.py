@@ -51,6 +51,30 @@ def sign_jpki_messages(
       if status.status_type() != CardResponseStatusType.NORMAL_END:
         tqdm.write(f"Warning: Signature failed at {p1.to_bytes(1, 'big').hex()}{p2.to_bytes(1, 'big').hex()}")
 
+def sign_jpki_messages(
+    card: CardConnection,
+    msg_lists: list = MESSAGES,
+):
+  p1p2 = []
+  # parameter search phase
+  for p1 in trange(0x00, 0x100, desc="p1", leave=False):
+    # first test with p2=0x00 and p2=0x80
+    msg = msg_lists[0]
+    _, s00 = card.jpki_sign(msg, p1=p1, p2=0x00, raise_error=False)
+    _, s80 = card.jpki_sign(msg, p1=p1, p2=0x80, raise_error=False)
+    if s00.status_type() != CardResponseStatusType.NORMAL_END and s80.status_type() != CardResponseStatusType.NORMAL_END:
+      continue # assume that this p1 is not valid
+
+    for p2 in trange(0x00, 0x100, desc="p2", leave=False):
+      sig, status = card.jpki_sign(msg, p1=p1, p2=p2, raise_error=False)
+      if status.status_type() == CardResponseStatusType.NORMAL_END:
+        tqdm.write(f"Signature found at {p1.to_bytes(1, 'big').hex()}{p2.to_bytes(1, 'big').hex()}: {len(sig)} bytes")
+        p1p2.append((p1, p2))
+  
+  # ub test phase
+  for p1, p2 in tqdm(p1p2, desc="P1P2(Test)", leave=False):
+    seek_jpki_sign_ub(card, p1=p1, p2=p2)
+    
 
 
 def sign_std_messages(
@@ -91,6 +115,31 @@ def get_whole_record(
 ):
   return card.transmit(CommandApdu(0x00, 0xb2, 1, 0x05, None, "max").to_bytes(), raise_error=True)[0]
 
+def make_bytes(length: int) -> bytes:
+  return bytes([i % 256 for i in range(length)])
+
+def seek_jpki_sign_ub(
+    card: CardConnection,
+    start: int = 0xf0,
+    end: int = 0xfff,
+    p1: int = 0x00,
+    p2: int = 0x00,
+):
+  """
+  Seek for the upper bound byte length that JPKI Sign can handle
+  Find the maximum length with the binary search algorithm
+  """
+
+  while start < end:
+    mid = (start + end) // 2
+    msg = make_bytes(mid)
+    _, status = card.jpki_sign(msg, raise_error=False, p1=p1, p2=p2)
+    stt = status.status_type()
+    if stt == CardResponseStatusType.NORMAL_END:
+      start = mid + 1
+    else:
+      end = mid
+  tqdm.write(f"JPKI Sign can handle {start} bytes")
 
 def test_efs(
     card: CardConnection,
@@ -119,7 +168,7 @@ def test_efs(
     if CardFileAttribute.IEF_INTERNAL_AUTHENTICATE_KEY in attr:
       intauth_messages(card)
     if CardFileAttribute.JPKI_SIGN_PRIVATE_KEY in attr:
-      sign_jpki_messages(card, msg_lists=MSG2BYLEN)
-      sign_std_9e9a_messages(card, msg_lists=MSG2BYLEN)
+      sign_jpki_messages(card, msg_lists=MESSAGES)
+      sign_std_9e9a_messages(card, msg_lists=MESSAGES)
     
   print("Test Finished")

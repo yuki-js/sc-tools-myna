@@ -3,6 +3,7 @@ import datetime
 from textwrap import dedent
 import time
 
+import smartcard
 from tqdm import tqdm, trange
 from mynatest.constants import COMMON_DF_DATA, JPKI_DATA, JUKI_DATA, KENHOJO_DATA, KENKAKU_DATA
 from mynatest.methods import get_whole_record, iter_record, make_bytes, safe_verify, sign_std_messages, test_efs
@@ -67,79 +68,7 @@ def transmit_callback(
 
 card.transmit_callback = transmit_callback
 
-#write atr to file
-transceive_log_file.write(f"ATR: {atr}\n\n")
 
-
-print("-------------- Default DF Phase --------------")
-iin, _ = card.get_data(b"\x42")
-cin, _ = card.get_data(b"\x45")
-card_data, _ = card.get_data(b"\x66")
-print(f"IIN: {iin.hex()}")
-print(f"CIN: {cin.hex()}")
-print(f"Card Data: {card_data.hex()}")
-
-list_do(card)
-
-list_cla_ins(card)
-test_efs(card, 0, 0x10000, ignore_error=True)
-
-# Common DF
-print("-------------- Common DF Phase --------------")
-
-card.select_df(COMMON_DF_DATA["DF"].df)
-card.select_ef(b"\x00\x01")
-card_id = get_whole_record(card)[2:]
-print(f"Card ID: {card_id.decode('ascii')}")
-test_efs(card, 0, 0x10000, ignore_error=True)
-
-list_do(card)
-
-print("-------------- JPKI Phase --------------")
-
-card.select_df(JPKI_DATA["DF"].df)
-card.select_ef(JPKI_DATA["Token"].ef)
-token, status=card.read_binary()
-if status.status_type() != CardResponseStatusType.NORMAL_END:
-    print("Failed to read Token")
-    exit(1)
-
-card.select_ef(JPKI_DATA["Sign"]["PINEF"].ef)
-safe_verify(card, b"ABC123", 5)
-card.select_ef(JPKI_DATA["Auth"]["PINEF"].ef)
-safe_verify(card, b"1234", 3)
-
-test_efs(card, 0x2f00, 0x2fff, ignore_error=True)
-
-card.select_ef(JPKI_DATA["Auth"]["KeyEF"].ef)
-
-
-print("-------------- Kenhojo Phase --------------")
-
-card.select_df(KENHOJO_DATA["DF"].df)
-card.select_ef(KENHOJO_DATA["EFs"]["PINEF"].ef)
-safe_verify(card, b"1234", 3)
-test_efs(card, 0x2f00, 0x2fff, ignore_error=True)
-
-card.select_ef(KENHOJO_DATA["EFs"]["Mynumber"].ef)
-data, sw = card.read_binary()
-assert sw.sw == 0x9000
-myna=data[3:15].decode("ascii")
-print(f"My Number: {myna}")
-
-print("Kenkaku Phase")
-card.select_df(KENKAKU_DATA["DF"].df)
-card.select_ef(KENKAKU_DATA["EFs"]["PIN-A-EF"].ef)
-safe_verify(card, myna.encode("ascii"), 10)
-test_efs(card, 0x2f00, 0x2fff, ignore_error=True)
-
-print("-------------- Juki Phase --------------")
-card.select_df(JUKI_DATA["DF"].df)
-
-card.select_ef(JUKI_DATA["EFs"]["PIN-EF"].ef)
-safe_verify(card, b"1234", 3)
-
-test_efs(card, 0x2f00, 0x2fff, ignore_error=True)
 
 print("-------------- Extra JPKI Phase --------------")
 

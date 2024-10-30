@@ -15,6 +15,8 @@ def make_bytes(length: int) -> bytes:
   return bytes([i % 256 for i in range(length)])
 
 MSG2BYLEN = [
+  
+  make_bytes(0x220),
   make_bytes(32),
   SHA256_HEADER + make_bytes(32),
   make_bytes(64),
@@ -23,7 +25,6 @@ MSG2BYLEN = [
   make_bytes(129),
   make_bytes(256),
   make_bytes(257),
-  make_bytes(0xffff),
 ]
 
 SEC_CODE = {
