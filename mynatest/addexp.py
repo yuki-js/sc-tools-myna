@@ -79,89 +79,90 @@ card.transmit_callback = transmit_callback
 transceive_log_file.write(f"ATR: {atr}\n\n")
 
 def repower_card():
-    reader.reconnect(disposition=smartcard.scard.SCARD_UNPOWER_CARD)
+    # reader.reconnect(disposition=smartcard.scard.SCARD_UNPOWER_CARD)
+    pass
 
-print("-------------- Default DF Phase --------------")
-repower_card()
-iin, _ = card.get_data(b"\x42")
-cin, _ = card.get_data(b"\x45")
-card_data, _ = card.get_data(b"\x66")
-print(f"IIN: {iin.hex()}")
-print(f"CIN: {cin.hex()}")
-print(f"Card Data: {card_data.hex()}")
+# print("-------------- Default DF Phase --------------")
+# repower_card()
+# iin, _ = card.get_data(b"\x42")
+# cin, _ = card.get_data(b"\x45")
+# card_data, _ = card.get_data(b"\x66")
+# print(f"IIN: {iin.hex()}")
+# print(f"CIN: {cin.hex()}")
+# print(f"Card Data: {card_data.hex()}")
 
-repower_card()
-list_do(card)
+# repower_card()
+# list_do(card)
 
-repower_card()
-list_cla_ins(card)
+# repower_card()
+# list_cla_ins(card)
 
-repower_card()
-test_efs(card, 0, 0x30, ignore_error=True)
-test_efs(card, 0x2f00, 0x2fff, ignore_error=True)
+# repower_card()
+# test_efs(card, 0, 0x30, ignore_error=True)
+# test_efs(card, 0x2f00, 0x2fff, ignore_error=True)
 
-# Common DF
-print("-------------- Common DF Phase --------------")
+# # Common DF
+# print("-------------- Common DF Phase --------------")
 
-repower_card()
+# repower_card()
 
-card.select_df(COMMON_DF_DATA["DF"].df)
-card.select_ef(b"\x00\x01")
-card_id = get_whole_record(card)[2:]
-print(f"Card ID: {card_id.decode('ascii')}")
-test_efs(card, 0, 0x30, ignore_error=True)
-test_efs(card, 0x2f00, 0x2fff, ignore_error=True)
+# card.select_df(COMMON_DF_DATA["DF"].df)
+# card.select_ef(b"\x00\x01")
+# card_id = get_whole_record(card)[2:]
+# print(f"Card ID: {card_id.decode('ascii')}")
+# test_efs(card, 0, 0x30, ignore_error=True)
+# test_efs(card, 0x2f00, 0x2fff, ignore_error=True)
 
-list_do(card)
+# list_do(card)
 
-print("-------------- JPKI Phase --------------")
+# print("-------------- JPKI Phase --------------")
 
-repower_card()
-card.select_df(JPKI_DATA["DF"].df)
-card.select_ef(JPKI_DATA["Token"].ef)
-token, status=card.read_binary()
-if status.status_type() != CardResponseStatusType.NORMAL_END:
-    print("Failed to read Token")
-    exit(1)
+# repower_card()
+# card.select_df(JPKI_DATA["DF"].df)
+# card.select_ef(JPKI_DATA["Token"].ef)
+# token, status=card.read_binary()
+# if status.status_type() != CardResponseStatusType.NORMAL_END:
+#     print("Failed to read Token")
+#     exit(1)
 
-card.select_ef(JPKI_DATA["Sign"]["PINEF"].ef)
-safe_verify(card, b"ABC123", 5)
-card.select_ef(JPKI_DATA["Auth"]["PINEF"].ef)
-safe_verify(card, b"1234", 3)
+# card.select_ef(JPKI_DATA["Sign"]["PINEF"].ef)
+# safe_verify(card, b"ABC123", 5)
+# card.select_ef(JPKI_DATA["Auth"]["PINEF"].ef)
+# safe_verify(card, b"1234", 3)
 
-test_efs(card, 0x2f00, 0x2fff, ignore_error=True)
+# test_efs(card, 0x2f00, 0x2fff, ignore_error=True)
 
-card.select_ef(JPKI_DATA["Auth"]["KeyEF"].ef)
+# card.select_ef(JPKI_DATA["Auth"]["KeyEF"].ef)
 
 
-print("-------------- Kenhojo Phase --------------")
-repower_card()
+# print("-------------- Kenhojo Phase --------------")
+# repower_card()
 
-card.select_df(KENHOJO_DATA["DF"].df)
-card.select_ef(KENHOJO_DATA["EFs"]["PINEF"].ef)
-safe_verify(card, b"1234", 3)
-test_efs(card, 0x2f00, 0x2fff, ignore_error=True)
+# card.select_df(KENHOJO_DATA["DF"].df)
+# card.select_ef(KENHOJO_DATA["EFs"]["PINEF"].ef)
+# safe_verify(card, b"1234", 3)
+# test_efs(card, 0x2f00, 0x2fff, ignore_error=True)
 
-card.select_ef(KENHOJO_DATA["EFs"]["Mynumber"].ef)
-data, sw = card.read_binary()
-assert sw.sw == 0x9000
-myna=data[3:15].decode("ascii")
-print(f"My Number: {myna}")
+# card.select_ef(KENHOJO_DATA["EFs"]["Mynumber"].ef)
+# data, sw = card.read_binary()
+# assert sw.sw == 0x9000
+# myna=data[3:15].decode("ascii")
+# print(f"My Number: {myna}")
 
-print("Kenkaku Phase")
-card.select_df(KENKAKU_DATA["DF"].df)
-card.select_ef(KENKAKU_DATA["EFs"]["PIN-A-EF"].ef)
-safe_verify(card, myna.encode("ascii"), 10)
-test_efs(card, 0x2f00, 0x2fff, ignore_error=True)
+# print("Kenkaku Phase")
+# card.select_df(KENKAKU_DATA["DF"].df)
+# card.select_ef(KENKAKU_DATA["EFs"]["PIN-A-EF"].ef)
+# safe_verify(card, myna.encode("ascii"), 10)
+# test_efs(card, 0x2f00, 0x2fff, ignore_error=True)
 
-print("-------------- Juki Phase --------------")
-repower_card()
-card.select_df(JUKI_DATA["DF"].df)
+# print("-------------- Juki Phase --------------")
+# repower_card()
+# card.select_df(JUKI_DATA["DF"].df)
 
-card.select_ef(JUKI_DATA["EFs"]["PIN-EF"].ef)
-safe_verify(card, b"1234", 3)
+# card.select_ef(JUKI_DATA["EFs"]["PIN-EF"].ef)
+# safe_verify(card, b"1234", 3)
 
-test_efs(card, 0x2f00, 0x2fff, ignore_error=True)
+# test_efs(card, 0x2f00, 0x2fff, ignore_error=True)
 
 print("-------------- Extra JPKI Phase --------------")
 
@@ -211,7 +212,7 @@ p1p2_sign = find_p1p2(prepare_sign_fn)
 def seek_jpki_sign_ub(
     prepfn,
     start: int = 0xf0,
-    end: int = 0x1fff,
+    end: int = 0xffff,
     p1: int = 0x00,
     p2: int = 0x00,
 ):
