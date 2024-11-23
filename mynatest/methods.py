@@ -51,29 +51,6 @@ def sign_jpki_messages(
       if status.status_type() != CardResponseStatusType.NORMAL_END:
         tqdm.write(f"Warning: Signature failed at {p1.to_bytes(1, 'big').hex()}{p2.to_bytes(1, 'big').hex()}")
 
-def sign_jpki_messages(
-    card: CardConnection,
-    msg_lists: list = MESSAGES,
-):
-  p1p2 = []
-  # parameter search phase
-  for p1 in trange(0x00, 0x100, desc="p1", leave=False):
-    # first test with p2=0x00 and p2=0x80
-    msg = msg_lists[0]
-    _, s00 = card.jpki_sign(msg, p1=p1, p2=0x00, raise_error=False)
-    _, s80 = card.jpki_sign(msg, p1=p1, p2=0x80, raise_error=False)
-    if s00.status_type() != CardResponseStatusType.NORMAL_END and s80.status_type() != CardResponseStatusType.NORMAL_END:
-      continue # assume that this p1 is not valid
-
-    for p2 in trange(0x00, 0x100, desc="p2", leave=False):
-      sig, status = card.jpki_sign(msg, p1=p1, p2=p2, raise_error=False)
-      if status.status_type() == CardResponseStatusType.NORMAL_END:
-        tqdm.write(f"Signature found at {p1.to_bytes(1, 'big').hex()}{p2.to_bytes(1, 'big').hex()}: {len(sig)} bytes")
-        p1p2.append((p1, p2))
-  
-  # ub test phase
-  for p1, p2 in tqdm(p1p2, desc="P1P2(Test)", leave=False):
-    seek_jpki_sign_ub(card, p1=p1, p2=p2)
     
 
 
