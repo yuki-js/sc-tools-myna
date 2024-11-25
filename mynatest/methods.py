@@ -50,7 +50,6 @@ def sign_jpki_messages(
       _, status = card.jpki_sign(m, p1=p1, p2=p2, raise_error=False)
       if status.status_type() != CardResponseStatusType.NORMAL_END:
         tqdm.write(f"Warning: Signature failed at {p1.to_bytes(1, 'big').hex()}{p2.to_bytes(1, 'big').hex()}")
-
     
 
 
