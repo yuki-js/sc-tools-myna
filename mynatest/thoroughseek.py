@@ -92,8 +92,11 @@ print(f"Card Data: {card_data.hex()}")
 
 repower_card()
 list_do(card)
-repower_card()
-list_do(card, cla=0x80)
+try:
+    repower_card()
+    list_do(card, cla=0x80)
+except Exception as e:
+    print(f"Failed to list DO with CLA 0x80: {e}")
 
 repower_card()
 list_cla_ins(card)
@@ -271,6 +274,12 @@ def seek_by_p1p2(prepfn, p1p2):
 
 seek_by_p1p2(prepare_sign_fn, p1p2_sign)
 seek_by_p1p2(prepare_auth_fn, p1p2_auth)
+
+print("-------------- JPKI CLA-INS Phase --------------")
+
+prepare_auth_fn()
+list_cla_ins(card)
+
 
 print("-------------- Finalization --------------")
 print("Test has Finished!")
