@@ -92,6 +92,8 @@ print(f"Card Data: {card_data.hex()}")
 
 repower_card()
 list_do(card)
+repower_card()
+list_do(card, cla=0x80)
 
 repower_card()
 list_cla_ins(card)
