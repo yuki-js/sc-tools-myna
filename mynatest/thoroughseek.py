@@ -39,7 +39,7 @@ card = create_card_connection(
 
 # get command arguments from command line
 import sys
-filename = "transceive.log"
+filename = f"transceive_logs/transceive_{datetime.datetime.now().strftime('%Y%m%d-%H%M%S')}.log"
 if len(sys.argv) > 1:
     filename = sys.argv[1]
 
