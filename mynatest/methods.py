@@ -126,7 +126,11 @@ def test_efs(
   lief = list_ef(card, start=start, end=end, ignore_error=ignore_error)
   print("Testing Found EFs...")
   for (efid, attr) in tqdm(lief, desc="EFs"):
-    card.select_ef(efid)
+    try:
+      card.select_ef(efid)
+    except Exception as e:
+      tqdm.write(f"EF {efid.hex()} should not fail. Retrying...")
+      card.select_ef(efid)
     tqdm.write(f"EF: {efid.hex()} Attr: {attr.name}")
     if attr == CardFileAttribute.UNKNOWN:
       continue
