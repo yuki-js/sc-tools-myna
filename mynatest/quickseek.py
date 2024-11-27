@@ -81,6 +81,12 @@ transceive_log_file.write(f"ATR: {atr}\n\n")
 def repower_card():
     reader.reconnect(disposition=smartcard.scard.SCARD_UNPOWER_CARD)
 
+print("-------------- Initialization --------------")
+prompted_sign_pin = input("Enter Sign PIN: ")
+prompted_auth_pin = input("Enter Auth PIN: ")
+prompted_kenhojo_pin = input("Enter Kenhojo PIN: ")
+prompted_juki_pin = input("Enter Juki PIN: ")
+
 print("-------------- Default DF Phase --------------")
 repower_card()
 iin, _ = card.get_data(b"\x42")
@@ -131,13 +137,11 @@ if status.status_type() != CardResponseStatusType.NORMAL_END:
 
 list_do(card)
 card.select_ef(JPKI_DATA["Sign"]["PINEF"].ef)
-prompted_sign_pin = input("Enter Sign PIN: ")
 if len(prompted_sign_pin) > 5:
     safe_verify(card, prompted_sign_pin.encode("ascii"), 5)
 else: 
     print("PIN is too short. Skipping verification")
 card.select_ef(JPKI_DATA["Auth"]["PINEF"].ef)
-prompted_auth_pin = input("Enter Auth PIN: ")
 safe_verify(card, prompted_auth_pin.encode("ascii"), 3)
 
 card.transmit(CommandApdu(0x00, 0x84, 0x00, 0x00, None, 0x100).to_bytes())
@@ -155,16 +159,11 @@ if sw.sw != 0x9000:
 test_efs(card, 0, 0x30, ignore_error=True)
 test_efs(card, 0x2f00, 0x2fff, ignore_error=True)
 
-card.select_ef(JPKI_DATA["Auth"]["KeyEF"].ef)
-sign_std_messages(card)
-
-
 print("-------------- Kenhojo Phase --------------")
 repower_card()
 
 card.select_df(KENHOJO_DATA["DF"].df)
 card.select_ef(KENHOJO_DATA["EFs"]["PINEF"].ef)
-prompted_kenhojo_pin = input("Enter Kenhojo PIN: ")
 safe_verify(card, prompted_kenhojo_pin.encode("ascii"), 3)
 test_efs(card, 0, 0x30, ignore_error=True)
 test_efs(card, 0x2f00, 0x2fff, ignore_error=True)
@@ -189,8 +188,10 @@ repower_card()
 card.select_df(JUKI_DATA["DF"].df)
 
 card.select_ef(JUKI_DATA["EFs"]["PIN-EF"].ef)
-prompted_kenhojo_pin = input("Enter Juki PIN: ")
-safe_verify(card, prompted_kenhojo_pin.encode("ascii"), 3)
+if len(prompted_juki_pin) == 4:
+    safe_verify(card, prompted_juki_pin.encode("ascii"), 3)
+else:
+    print("Valid PIN is not provided. Skipping verification")
 
 test_efs(card, 0, 0x30, ignore_error=True)
 test_efs(card, 0x2f00, 0x2fff, ignore_error=True)
@@ -285,6 +286,7 @@ try:
     list_do(card, cla=0x80)
 except Exception as e:
     print(f"Failed to list DO with CLA 0x80: {e}")
+
 
 print("-------------- Finalization --------------")
 print("Test has Finished!")

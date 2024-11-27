@@ -2,7 +2,7 @@ SHA256_HEADER = bytes.fromhex("30 31 30 0d 06 09 60 86 48 01 65 03 04 02 01 05 0
 SHA1_HEADER = bytes.fromhex("30 21 30 09 06 05 2b 0e 03 02 1a 05 00 04 14")
 MD5_HEADER = bytes.fromhex("30 20 30 0c 06 08 2a 86 48 86 f7 0d 02 05 05 00 04 10")
 MESSAGES = [
-  SHA1_HEADER + bytes.fromhex("fcb9ccab72c3ce591a677d0c12f4a37f6151fa713f75a342bd3731a072a80f44"),
+  SHA256_HEADER + bytes.fromhex("d3a5fa66b20bc566467660a8c61d1313b21ac725ce77340df4fa1a66532e502b"),
 ]
 
 def make_bytes(length: int) -> bytes:
