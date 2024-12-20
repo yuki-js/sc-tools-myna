@@ -78,31 +78,31 @@ card.transmit_callback = transmit_callback
 #write atr to file
 transceive_log_file.write(f"ATR: {atr}\n\n")
 
-def repower_card():
+def repower_card(): # カードの電源を再投入する
     reader.reconnect(disposition=smartcard.scard.SCARD_UNPOWER_CARD)
 
 print("-------------- Default DF Phase --------------")
 repower_card()
-iin, _ = card.get_data(b"\x42")
-cin, _ = card.get_data(b"\x45")
-card_data, _ = card.get_data(b"\x66")
+iin, _ = card.get_data(b"\x42") # Issuer Identification Number のDOを取得
+cin, _ = card.get_data(b"\x45") # Card Image Number のDOを取得
+card_data, _ = card.get_data(b"\x66") # カードの仕様情報のDOを取得
 print(f"IIN: {iin.hex()}")
 print(f"CIN: {cin.hex()}")
 print(f"Card Data: {card_data.hex()}")
 
 repower_card()
-list_do(card)
+list_do(card) # データオブジェクトを全探索
 try:
     repower_card()
-    list_do(card, cla=0x80)
+    list_do(card, cla=0x80) # CLA 0x80のデータオブジェクトを全探索
 except Exception as e:
     print(f"Failed to list DO with CLA 0x80: {e}")
 
 repower_card()
-list_cla_ins(card)
+list_cla_ins(card) # CLAとINSの組み合わせを全探索
 
 repower_card()
-test_efs(card, 0, 0x30, ignore_error=True)
+test_efs(card, 0, 0x30, ignore_error=True) # EFを全探索
 test_efs(card, 0x2f00, 0x2fff, ignore_error=True)
 
 # Common DF
@@ -110,9 +110,9 @@ print("-------------- Common DF Phase --------------")
 
 repower_card()
 
-card.select_df(COMMON_DF_DATA["DF"].df)
-card.select_ef(b"\x00\x01")
-card_id = get_whole_record(card)[2:]
+card.select_df(COMMON_DF_DATA["DF"].df) # DFを選択
+card.select_ef(b"\x00\x01") # EFを選択
+card_id = get_whole_record(card)[2:] # レコードからカードIDを取得
 print(f"Card ID: {card_id.decode('ascii')}")
 test_efs(card, 0, 0x30, ignore_error=True)
 test_efs(card, 0x2f00, 0x2fff, ignore_error=True)
@@ -124,7 +124,7 @@ print("-------------- JPKI Phase --------------")
 repower_card()
 card.select_df(JPKI_DATA["DF"].df)
 card.select_ef(JPKI_DATA["Token"].ef)
-token, status=card.read_binary()
+token, status=card.read_binary() # トークンの存在を確認してマイナンバーカードかどうかを判定
 if status.status_type() != CardResponseStatusType.NORMAL_END:
     print("Failed to read Token")
     exit(1)
@@ -140,15 +140,15 @@ card.select_ef(JPKI_DATA["Auth"]["PINEF"].ef)
 prompted_auth_pin = input("Enter Auth PIN: ")
 safe_verify(card, prompted_auth_pin.encode("ascii"), 3)
 
-card.transmit(CommandApdu(0x00, 0x84, 0x00, 0x00, None, 0x100).to_bytes())
-_, sw = card.transmit(CommandApdu(0x00, 0x84, 0x00, 0x00, None, 0x101).to_bytes(), raise_error=False)
-assert sw.sw != 0x9000
+card.transmit(CommandApdu(0x00, 0x84, 0x00, 0x00, None, 0x100).to_bytes()) # GET CHALLENGEを試行
+_, sw = card.transmit(CommandApdu(0x00, 0x84, 0x00, 0x00, None, 0x101).to_bytes(), raise_error=False) # GET CHALLENGE 257バイトを試行
+assert sw.sw != 0x9000 # 失敗するに違いない。GET CHALLENGE 257バイトはサポートされていないはず
 
 
 card.select_ef(JPKI_DATA["Pinless"]["UnknownEF"].ef)
-card.transmit(CommandApdu(0x80, 0xa2, 0x06, 0xc1, JPKI_DATA["Pinless"]["IntermediateCert"], 0x00, True).to_bytes())
-_, sw = card.transmit(CommandApdu(0x80, 0xa2, 0x00, 0xc1, JPKI_DATA["Pinless"]["IntermediateCertSig"], 0x00, True).to_bytes(), raise_error=False)
-if sw.sw != 0x9000:
+card.transmit(CommandApdu(0x80, 0xa2, 0x06, 0xc1, JPKI_DATA["Pinless"]["IntermediateCert"], 0x00, True).to_bytes()) # 中間証明書を書き込む
+_, sw = card.transmit(CommandApdu(0x80, 0xa2, 0x00, 0xc1, JPKI_DATA["Pinless"]["IntermediateCertSig"], 0x00, True).to_bytes(), raise_error=False) # 中間証明書署名を書き込む
+if sw.sw != 0x9000: # 成功するカードかどうかを判定
     print("This card does not support such IntermediateCertSig")
 
 
@@ -156,7 +156,7 @@ test_efs(card, 0, 0x30, ignore_error=True)
 test_efs(card, 0x2f00, 0x2fff, ignore_error=True)
 
 card.select_ef(JPKI_DATA["Auth"]["KeyEF"].ef)
-sign_std_messages(card)
+sign_std_messages(card) # 標準メッセージに対して署名を試行
 
 
 print("-------------- Kenhojo Phase --------------")
@@ -223,7 +223,7 @@ def prepare_auth_fn():
         time.sleep(1)
         prepare_auth_fn()
 
-def find_p1p2(prepfn):
+def find_p1p2(prepfn): # 署名可能なP1P2を探索する
     p1p2 = []
     # parameter search phase
     for p1 in trange(0x00, 0x10, desc="p1", leave=False):
@@ -246,7 +246,7 @@ def seek_jpki_sign_ub(
     end: int = 0xffff,
     p1: int = 0x00,
     p2: int = 0x00,
-):
+): # JPKI Signが扱える上限バイト長を二分探索
   """
   Seek for the upper bound byte length that JPKI Sign can handle
   Find the maximum length with the binary search algorithm
